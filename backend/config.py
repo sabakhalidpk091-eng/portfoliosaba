@@ -6,7 +6,10 @@ class Settings(BaseSettings):
         "MONGODB_URI",
         "mongodb+srv://portfolio:q6bcEVLl57qUb812@cluster0.zvhw8ay.mongodb.net/portfolio_db?retryWrites=true&w=majority&appName=Cluster0"
     )
-    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
+    CORS_ORIGINS: str = os.getenv(
+        "CORS_ORIGINS", 
+        "http://localhost:5173,http://localhost:3000,https://portfoliosabakhalid-9sls.vercel.app"
+    )
 
     class Config:
         env_file = ".env"
