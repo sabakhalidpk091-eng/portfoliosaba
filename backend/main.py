@@ -53,6 +53,7 @@ async def root():
 @app.post("/api/contact", tags=["Contact"])
 async def send_message(payload: dict = Body(...), db=Depends(get_db)):
     payload["created_at"] = datetime.now().isoformat()
+    payload.pop("_id", None)
     result = await db["contacts"].insert_one(payload)
     payload["id"] = str(result.inserted_id)
     payload.pop("_id", None)
@@ -60,18 +61,19 @@ async def send_message(payload: dict = Body(...), db=Depends(get_db)):
 
 @app.get("/api/contact", tags=["Contact"])
 async def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
-    docs = await db["contacts"].find().skip(skip).limit(limit).to_list(length=limit)
+    docs = await db["contacts"].find().skip(skip).limit(limit).to_list(length=limit) or []
     return serialize_list(docs)
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
 @app.get("/api/projects", tags=["Projects"])
 async def list_projects(db=Depends(get_db)):
-    docs = await db["projects"].find().to_list(length=100)
+    docs = await db["projects"].find().to_list(length=100) or []
     return serialize_list(docs)
 
 @app.post("/api/projects", tags=["Projects"])
 async def create_project(payload: dict = Body(...), db=Depends(get_db)):
+    payload.pop("_id", None)
     result = await db["projects"].insert_one(payload)
     payload["id"] = str(result.inserted_id)
     payload.pop("_id", None)
@@ -94,11 +96,12 @@ async def update_project(item_id: str, payload: dict = Body(...), db=Depends(get
 # ── Skills ────────────────────────────────────────────────────────────────────
 @app.get("/api/skills", tags=["Skills"])
 async def list_skills(db=Depends(get_db)):
-    docs = await db["skills"].find().to_list(length=100)
+    docs = await db["skills"].find().to_list(length=100) or []
     return serialize_list(docs)
 
 @app.post("/api/skills", tags=["Skills"])
 async def create_skill(payload: dict = Body(...), db=Depends(get_db)):
+    payload.pop("_id", None)
     result = await db["skills"].insert_one(payload)
     payload["id"] = str(result.inserted_id)
     payload.pop("_id", None)
@@ -121,11 +124,12 @@ async def update_skill(item_id: str, payload: dict = Body(...), db=Depends(get_d
 # ── Experience ────────────────────────────────────────────────────────────────
 @app.get("/api/experience", tags=["Experience"])
 async def list_experience(db=Depends(get_db)):
-    docs = await db["experience"].find().to_list(length=100)
+    docs = await db["experience"].find().to_list(length=100) or []
     return serialize_list(docs)
 
 @app.post("/api/experience", tags=["Experience"])
 async def create_experience(payload: dict = Body(...), db=Depends(get_db)):
+    payload.pop("_id", None)
     result = await db["experience"].insert_one(payload)
     payload["id"] = str(result.inserted_id)
     payload.pop("_id", None)
