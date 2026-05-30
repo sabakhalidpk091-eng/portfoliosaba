@@ -11,7 +11,10 @@ def get_db():
     return db_manager.db
 
 async def connect_to_mongo():
-    db_manager.client = AsyncIOMotorClient(settings.MONGODB_URI)
+    db_manager.client = AsyncIOMotorClient(
+        settings.MONGODB_URI,
+        tlsAllowInvalidCertificates=True
+    )
     db_manager.db = db_manager.client.get_default_database()
     print("Connected to MongoDB Atlas! 🍃")
 
