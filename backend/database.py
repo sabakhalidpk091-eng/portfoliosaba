@@ -15,7 +15,7 @@ async def connect_to_mongo():
         settings.MONGODB_URI,
         tlsAllowInvalidCertificates=True
     )
-    db_manager.db = db_manager.client.get_default_database()
+    db_manager.db = db_manager.client["portfolio_db"]
     print("Connected to MongoDB Atlas! 🍃")
 
 async def close_mongo_connection():
