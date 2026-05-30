@@ -32,15 +32,16 @@ app.add_middleware(
 )
 
 # ── Helper ────────────────────────────────────────────────────────────────────
-def serialize_doc(doc) -> dict:
+def serialize_doc(doc):
     if not doc:
-        return {}
-    doc["id"] = str(doc["_id"])
-    del doc["_id"]
+        return None
+    if "_id" in doc:
+        doc["id"] = str(doc["_id"])
+        del doc["_id"]
     return doc
 
 def serialize_list(docs) -> list:
-    return [serialize_doc(d) for d in docs]
+    return [serialize_doc(d) for d in docs if d]
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -59,17 +60,25 @@ async def send_message(payload: dict = Body(...), db=Depends(get_db)):
     payload.pop("_id", None)
     return payload
 
-@app.get("/api/contact", tags=["Contact"])
+@app.get("/api/contact", response_model=List[dict], tags=["Contact"])
 async def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
-    docs = await db["contacts"].find().skip(skip).limit(limit).to_list(length=limit) or []
-    return serialize_list(docs)
+    try:
+        cursor = db["contacts"].find().skip(skip).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return serialize_list(docs)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
-@app.get("/api/projects", tags=["Projects"])
+@app.get("/api/projects", response_model=List[dict], tags=["Projects"])
 async def list_projects(db=Depends(get_db)):
-    docs = await db["projects"].find().to_list(length=100) or []
-    return serialize_list(docs)
+    try:
+        cursor = db["projects"].find()
+        projects = await cursor.to_list(length=100)
+        return [serialize_doc(p) for p in projects]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/projects", tags=["Projects"])
 async def create_project(payload: dict = Body(...), db=Depends(get_db)):
@@ -94,10 +103,14 @@ async def update_project(item_id: str, payload: dict = Body(...), db=Depends(get
 
 
 # ── Skills ────────────────────────────────────────────────────────────────────
-@app.get("/api/skills", tags=["Skills"])
+@app.get("/api/skills", response_model=List[dict], tags=["Skills"])
 async def list_skills(db=Depends(get_db)):
-    docs = await db["skills"].find().to_list(length=100) or []
-    return serialize_list(docs)
+    try:
+        cursor = db["skills"].find()
+        skills = await cursor.to_list(length=100)
+        return [serialize_doc(s) for s in skills]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/skills", tags=["Skills"])
 async def create_skill(payload: dict = Body(...), db=Depends(get_db)):
@@ -122,10 +135,14 @@ async def update_skill(item_id: str, payload: dict = Body(...), db=Depends(get_d
 
 
 # ── Experience ────────────────────────────────────────────────────────────────
-@app.get("/api/experience", tags=["Experience"])
+@app.get("/api/experience", response_model=List[dict], tags=["Experience"])
 async def list_experience(db=Depends(get_db)):
-    docs = await db["experience"].find().to_list(length=100) or []
-    return serialize_list(docs)
+    try:
+        cursor = db["experience"].find()
+        experience = await cursor.to_list(length=100)
+        return [serialize_doc(e) for e in experience]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/experience", tags=["Experience"])
 async def create_experience(payload: dict = Body(...), db=Depends(get_db)):
