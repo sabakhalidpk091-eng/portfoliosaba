@@ -1,54 +1,31 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
-from bson import ObjectId
-
-# Helper to handle MongoDB ObjectId as a string
-class MongoBaseModel(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-        arbitrary_types_allowed=True
-    )
 
 # ── Contact ────────────────────────────────────────────────────────────────────
-
 class ContactCreate(BaseModel):
     name: str
     email: str
     subject: Optional[str] = None
     message: str
 
-class ContactResponse(MongoBaseModel):
-    id: Optional[str] = Field(alias="_id", default=None)
-    name: str
-    email: str
-    subject: Optional[str] = None
-    message: str
-    created_at: datetime = Field(default_factory=datetime.now)
-
 # ── Project ────────────────────────────────────────────────────────────────────
-
-class ProjectResponse(MongoBaseModel):
-    id: Optional[str] = Field(alias="_id", default=None)
+class ProjectCreate(BaseModel):
     number: str
     title: str
     description: str
     tags: Optional[str] = None
     features: Optional[str] = None
-    color_class: str
+    color_class: str = "p1"
+    link: Optional[str] = None
 
 # ── Skill ──────────────────────────────────────────────────────────────────────
-
-class SkillResponse(MongoBaseModel):
-    id: Optional[str] = Field(alias="_id", default=None)
+class SkillCreate(BaseModel):
     category: str
     name: str
-    pill_class: str
+    pill_class: str = "fe"
 
 # ── Experience ─────────────────────────────────────────────────────────────────
-
-class ExperienceResponse(MongoBaseModel):
-    id: Optional[str] = Field(alias="_id", default=None)
+class ExperienceCreate(BaseModel):
     position: str
     company: str
     period: str
