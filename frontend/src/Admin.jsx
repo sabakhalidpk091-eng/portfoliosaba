@@ -3,7 +3,8 @@ import {
     fetchProjects, fetchExperience, fetchSkills,
     createProject, createExperience, createSkill,
     updateProject, updateExperience, updateSkill,
-    deleteProject, deleteExperience, deleteSkill
+    deleteProject, deleteExperience, deleteSkill,
+    fetchMessages
 } from './api'
 
 function Admin() {
@@ -33,8 +34,8 @@ function Admin() {
 
         // Fetch messages
         try {
-            const res = await fetch("http://localhost:8000/api/contact")
-            if (res.ok) setMessages(await res.json())
+            const m = await fetchMessages()
+            setMessages(m)
         } catch (err) { console.error(err) }
     }
 

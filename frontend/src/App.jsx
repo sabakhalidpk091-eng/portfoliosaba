@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { fetchProjects, fetchSkills, fetchExperience, sendContact } from './api'
 import Admin from './Admin'
+import emailjs from '@emailjs/browser'
 
 function Home() {
   const [theme, setTheme] = useState('dark')
@@ -45,13 +46,33 @@ function Home() {
   const handleContactSubmit = async (e) => {
     e.preventDefault()
     setStatus('Sending...')
+
+    // 1. Send to Backend Database
     try {
       await sendContact(formData)
-      setStatus('Success! Message sent.')
-      setFormData({ name: '', email: '', message: '' })
     } catch (err) {
-      setStatus('Error sending message.')
+      console.error("DB Save failed:", err)
     }
+
+    // 2. Send Direct Email via EmailJS
+    // Replace placeholders with your own keys from EmailJS
+    const serviceId = 'service_xxxxxx' // Aapka Service ID
+    const templateId = 'template_xxxxxxx' // Aapka Template ID
+    const publicKey = 'your_public_key'  // Aapka Public Key
+
+    emailjs.send(serviceId, templateId, {
+      from_name: formData.name,
+      from_email: formData.email,
+      message: formData.message,
+      to_email: 'saba@email.com', // Aapka email
+    }, publicKey)
+      .then(() => {
+        setStatus('Success! Email sent and saved.')
+        setFormData({ name: '', email: '', message: '' })
+      }, (error) => {
+        console.error("EmailJS Error:", error)
+        setStatus('Saved to database, but email failed. Check your EmailJS keys.')
+      })
   }
 
   const groupedSkills = skills.reduce((acc, skill) => {
@@ -319,7 +340,9 @@ function Home() {
               <div className="contact-info-icon-wrap"><User size={20} /></div>
               <div className="contact-info-text">
                 <div className="info-label">LINKEDIN</div>
-                <div className="info-val">https://www.linkedin.com/in/saba-khalid-6ba1793b3/</div>
+                <a href="https://www.linkedin.com/in/saba-khalid-6ba1793b3/" target="_blank" rel="noopener noreferrer" className="info-val">
+                  View Profile
+                </a>
                 <div className="info-sub">Professional network</div>
               </div>
             </div>
@@ -327,7 +350,9 @@ function Home() {
               <div className="contact-info-icon-wrap"><Code size={20} /></div>
               <div className="contact-info-text">
                 <div className="info-label">GITHUB</div>
-                <div className="info-val">https://github.com/sabakhalidpk091-eng/sabakhalidpk091-eng</div>
+                <a href="https://github.com/sabakhalidpk091-eng" target="_blank" rel="noopener noreferrer" className="info-val">
+                  Check Repos
+                </a>
                 <div className="info-sub">Code & Repos</div>
               </div>
             </div>
@@ -342,9 +367,9 @@ function Home() {
               <div className="footer-logo">SABA.</div>
               <p className="footer-bio">Full-Stack Developer building fast, scalable, and polished web applications.</p>
               <div className="footer-socials">
-                <a href="#" className="social-icon-btn"><Code size={18} /></a>
-                <a href="#" className="social-icon-btn"><User size={18} /></a>
-                <a href="#" className="social-icon-btn"><Mail size={18} /></a>
+                <a href="https://github.com/sabakhalidpk091-eng" target="_blank" rel="noopener noreferrer" className="social-icon-btn"><Code size={18} /></a>
+                <a href="https://www.linkedin.com/in/saba-khalid-6ba1793b3/" target="_blank" rel="noopener noreferrer" className="social-icon-btn"><User size={18} /></a>
+                <a href="https://wa.me/923230513988" target="_blank" rel="noopener noreferrer" className="social-icon-btn"><MessageSquare size={18} /></a>
               </div>
             </div>
 
@@ -360,8 +385,8 @@ function Home() {
             <div className="footer-links-col">
               <h4>CONTACT</h4>
               <a href="mailto:saba@email.com">Email</a>
-              <a href="#">WhatsApp</a>
-              <a href="#">LinkedIn</a>
+              <a href="https://wa.me/923230513988" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+              <a href="https://www.linkedin.com/in/saba-khalid-6ba1793b3/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
             </div>
 
             <div className="footer-status-col">

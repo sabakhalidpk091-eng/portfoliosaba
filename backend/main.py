@@ -1,20 +1,30 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
+from bson import ObjectId
+from contextlib import asynccontextmanager
 
 from config import settings
-from database import engine, Base, get_db
-from models import ContactMessage, Project, Skill, Experience
-from schemas import ContactCreate, ContactResponse, ProjectResponse, SkillResponse, ExperienceResponse
+from database import connect_to_mongo, close_mongo_connection, get_db
+from schemas import (
+    ContactCreate, ContactResponse, 
+    ProjectResponse, SkillResponse, ExperienceResponse
+)
 
-# Create tables on startup
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Connect to MongoDB
+    await connect_to_mongo()
+    yield
+    # Shutdown: Close connection
+    await close_mongo_connection()
 
 app = FastAPI(
-    title="Saba Portfolio API",
+    title="Saba Portfolio API (MongoDB)",
     description="FastAPI backend for Saba's developer portfolio",
-    version="1.0.0",
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
@@ -27,132 +37,111 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Helper ───────────────────────────────────────────────────────────────────
+def serialize_doc(doc):
+    if not doc:
+        return None
+    doc["_id"] = str(doc["_id"])
+    return doc
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
-def root():
-    return {"message": "Saba Portfolio API is running 🚀"}
+async def root():
+    return {"message": "Saba Portfolio API on MongoDB is running 🚀"}
 
 
 # ── Contact ────────────────────────────────────────────────────────────────────
 @app.post("/api/contact", response_model=ContactResponse, tags=["Contact"])
-def send_message(payload: ContactCreate, db: Session = Depends(get_db)):
-    """Save a contact form submission to SQL Server."""
-    msg = ContactMessage(**payload.model_dump())
-    db.add(msg)
-    db.commit()
-    db.refresh(msg)
-    return msg
-
+async def send_message(payload: ContactCreate, db=Depends(get_db)):
+    msg_dict = payload.model_dump()
+    msg_dict["created_at"] = datetime.now()
+    result = await db["contacts"].insert_one(msg_dict)
+    msg_dict["_id"] = result.inserted_id
+    return serialize_doc(msg_dict)
 
 @app.get("/api/contact", response_model=List[ContactResponse], tags=["Contact"])
-def list_messages(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    """List all contact messages (admin use)."""
-    return db.query(ContactMessage).offset(skip).limit(limit).all()
+async def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
+    cursor = db["contacts"].find().skip(skip).limit(limit)
+    messages = await cursor.to_list(length=limit)
+    return [serialize_doc(m) for m in messages]
 
 
 # ── Projects ───────────────────────────────────────────────────────────────────
 @app.get("/api/projects", response_model=List[ProjectResponse], tags=["Projects"])
-def list_projects(db: Session = Depends(get_db)):
-    return db.query(Project).all()
+async def list_projects(db=Depends(get_db)):
+    cursor = db["projects"].find()
+    projects = await cursor.to_list(length=100)
+    return [serialize_doc(p) for p in projects]
 
 @app.post("/api/projects", response_model=ProjectResponse, tags=["Projects"])
-def create_project(payload: ProjectResponse, db: Session = Depends(get_db)):
-    # Simple creation for dashboard (omitting id from payload if needed, 
-    # but here we'll assume a schema update or just manual mapping)
+async def create_project(payload: ProjectResponse, db=Depends(get_db)):
     data = payload.model_dump(exclude={"id"})
-    proj = Project(**data)
-    db.add(proj)
-    db.commit()
-    db.refresh(proj)
-    return proj
+    result = await db["projects"].insert_one(data)
+    data["_id"] = result.inserted_id
+    return serialize_doc(data)
 
 @app.delete("/api/projects/{item_id}", tags=["Projects"])
-def delete_project(item_id: int, db: Session = Depends(get_db)):
-    db.query(Project).filter(Project.id == item_id).delete()
-    db.commit()
+async def delete_project(item_id: str, db=Depends(get_db)):
+    await db["projects"].delete_one({"_id": ObjectId(item_id)})
     return {"status": "deleted"}
 
 @app.put("/api/projects/{item_id}", response_model=ProjectResponse, tags=["Projects"])
-def update_project(item_id: int, payload: ProjectResponse, db: Session = Depends(get_db)):
-    proj = db.query(Project).filter(Project.id == item_id).first()
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
+async def update_project(item_id: str, payload: ProjectResponse, db=Depends(get_db)):
     data = payload.model_dump(exclude={"id"})
-    for key, value in data.items():
-        setattr(proj, key, value)
-    
-    db.commit()
-    db.refresh(proj)
-    return proj
+    await db["projects"].update_one({"_id": ObjectId(item_id)}, {"$set": data})
+    data["_id"] = ObjectId(item_id)
+    return serialize_doc(data)
 
 
 # ── Skills ──────────────────────────────────────────────────────────────────────
 @app.get("/api/skills", response_model=List[SkillResponse], tags=["Skills"])
-def list_skills(db: Session = Depends(get_db)):
-    return db.query(Skill).all()
+async def list_skills(db=Depends(get_db)):
+    cursor = db["skills"].find()
+    skills = await cursor.to_list(length=100)
+    return [serialize_doc(s) for s in skills]
 
 @app.post("/api/skills", response_model=SkillResponse, tags=["Skills"])
-def create_skill(payload: SkillResponse, db: Session = Depends(get_db)):
+async def create_skill(payload: SkillResponse, db=Depends(get_db)):
     data = payload.model_dump(exclude={"id"})
-    skill = Skill(**data)
-    db.add(skill)
-    db.commit()
-    db.refresh(skill)
-    return skill
+    result = await db["skills"].insert_one(data)
+    data["_id"] = result.inserted_id
+    return serialize_doc(data)
 
 @app.delete("/api/skills/{item_id}", tags=["Skills"])
-def delete_skill(item_id: int, db: Session = Depends(get_db)):
-    db.query(Skill).filter(Skill.id == item_id).delete()
-    db.commit()
+async def delete_skill(item_id: str, db=Depends(get_db)):
+    await db["skills"].delete_one({"_id": ObjectId(item_id)})
     return {"status": "deleted"}
 
 @app.put("/api/skills/{item_id}", response_model=SkillResponse, tags=["Skills"])
-def update_skill(item_id: int, payload: SkillResponse, db: Session = Depends(get_db)):
-    skill = db.query(Skill).filter(Skill.id == item_id).first()
-    if not skill:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    
+async def update_skill(item_id: str, payload: SkillResponse, db=Depends(get_db)):
     data = payload.model_dump(exclude={"id"})
-    for key, value in data.items():
-        setattr(skill, key, value)
-    
-    db.commit()
-    db.refresh(skill)
-    return skill
+    await db["skills"].update_one({"_id": ObjectId(item_id)}, {"$set": data})
+    data["_id"] = ObjectId(item_id)
+    return serialize_doc(data)
 
 
 # ── Experience ─────────────────────────────────────────────────────────────────
 @app.get("/api/experience", response_model=List[ExperienceResponse], tags=["Experience"])
-def list_experience(db: Session = Depends(get_db)):
-    return db.query(Experience).all()
+async def list_experience(db=Depends(get_db)):
+    cursor = db["experience"].find()
+    experience = await cursor.to_list(length=100)
+    return [serialize_doc(e) for e in experience]
 
 @app.post("/api/experience", response_model=ExperienceResponse, tags=["Experience"])
-def create_experience(payload: ExperienceResponse, db: Session = Depends(get_db)):
+async def create_experience(payload: ExperienceResponse, db=Depends(get_db)):
     data = payload.model_dump(exclude={"id"})
-    exp = Experience(**data)
-    db.add(exp)
-    db.commit()
-    db.refresh(exp)
-    return exp
+    result = await db["experience"].insert_one(data)
+    data["_id"] = result.inserted_id
+    return serialize_doc(data)
 
 @app.delete("/api/experience/{item_id}", tags=["Experience"])
-def delete_experience(item_id: int, db: Session = Depends(get_db)):
-    db.query(Experience).filter(Experience.id == item_id).delete()
-    db.commit()
+async def delete_experience(item_id: str, db=Depends(get_db)):
+    await db["experience"].delete_one({"_id": ObjectId(item_id)})
     return {"status": "deleted"}
 
 @app.put("/api/experience/{item_id}", response_model=ExperienceResponse, tags=["Experience"])
-def update_experience(item_id: int, payload: ExperienceResponse, db: Session = Depends(get_db)):
-    exp = db.query(Experience).filter(Experience.id == item_id).first()
-    if not exp:
-        raise HTTPException(status_code=404, detail="Experience not found")
-    
+async def update_experience(item_id: str, payload: ExperienceResponse, db=Depends(get_db)):
     data = payload.model_dump(exclude={"id"})
-    for key, value in data.items():
-        setattr(exp, key, value)
-    
-    db.commit()
-    db.refresh(exp)
-    return exp
+    await db["experience"].update_one({"_id": ObjectId(item_id)}, {"$set": data})
+    data["_id"] = ObjectId(item_id)
+    return serialize_doc(data)

@@ -19,6 +19,12 @@ export async function fetchExperience() {
     return res.json();
 }
 
+export async function fetchMessages() {
+    const res = await fetch(`${BASE}/api/contact`);
+    if (!res.ok) throw new Error("Failed to fetch messages");
+    return res.json();
+}
+
 // POST
 export async function sendContact(data) {
     const res = await fetch(`${BASE}/api/contact`, {

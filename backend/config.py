@@ -1,16 +1,15 @@
+import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = (
-        "mssql+pyodbc:///?odbc_connect="
-        "DRIVER={ODBC Driver 17 for SQL Server};"
-        "SERVER=localhost;"
-        "DATABASE=portfolio;"
-        "Trusted_Connection=yes"
+    MONGODB_URI: str = os.getenv(
+        "MONGODB_URI",
+        "mongodb+srv://portfolio:q6bcEVLl57qUb812@cluster0.zvhw8ay.mongodb.net/portfolio_db?retryWrites=true&w=majority&appName=Cluster0"
     )
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()

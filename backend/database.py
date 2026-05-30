@@ -1,20 +1,20 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from motor.motor_asyncio import AsyncIOMotorClient
 from config import settings
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True,
-)
+class Database:
+    client: AsyncIOMotorClient = None
+    db = None
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
+db_manager = Database()
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    return db_manager.db
+
+async def connect_to_mongo():
+    db_manager.client = AsyncIOMotorClient(settings.MONGODB_URI)
+    db_manager.db = db_manager.client.get_default_database()
+    print("Connected to MongoDB Atlas! 🍃")
+
+async def close_mongo_connection():
+    db_manager.client.close()
+    print("MongoDB connection closed.")
