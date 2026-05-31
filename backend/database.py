@@ -1,23 +1,14 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from config import settings
+import os
+from supabase import create_client
 
-class Database:
-    client: AsyncIOMotorClient = None
-    db = None
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-db_manager = Database()
+if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+    raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in the environment")
+
+_supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 def get_db():
-    return db_manager.db
-
-async def connect_to_mongo():
-    db_manager.client = AsyncIOMotorClient(
-        settings.MONGODB_URI,
-        tlsAllowInvalidCertificates=True
-    )
-    db_manager.db = db_manager.client["portfolio_db"]
-    print("Connected to MongoDB Atlas! 🍃")
-
-async def close_mongo_connection():
-    db_manager.client.close()
-    print("MongoDB connection closed.")
+    """Return the initialized Supabase client."""
+    return _supabase_client

@@ -2,23 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from datetime import datetime
-from bson import ObjectId
-from contextlib import asynccontextmanager
 
 from config import settings
-from database import connect_to_mongo, close_mongo_connection, get_db
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await connect_to_mongo()
-    yield
-    await close_mongo_connection()
+from database import get_db
 
 app = FastAPI(
-    title="Saba Portfolio API (MongoDB)",
-    description="FastAPI backend for Saba's developer portfolio",
+    title="Saba Portfolio API (Supabase)",
+    description="FastAPI backend for Saba's developer portfolio (Supabase)",
     version="2.0.0",
-    lifespan=lifespan
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
@@ -46,121 +37,147 @@ def serialize_list(docs) -> list:
 
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
-async def root():
-    return {"message": "Saba Portfolio API on MongoDB is running 🚀"}
+def root():
+    return {"message": "Saba Portfolio API on Supabase is running 🚀"}
 
 
 # ── Contact ───────────────────────────────────────────────────────────────────
 @app.post("/api/contact", tags=["Contact"])
-async def send_message(payload: dict = Body(...), db=Depends(get_db)):
-    payload["created_at"] = datetime.now().isoformat()
-    payload.pop("_id", None)
-    result = await db["contacts"].insert_one(payload)
-    payload["id"] = str(result.inserted_id)
-    payload.pop("_id", None)
-    return payload
+def send_message(payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload["created_at"] = datetime.now().isoformat()
+        payload.pop("_id", None)
+        response = db.table("contacts").insert(payload).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/contact", response_model=List[dict], tags=["Contact"])
-async def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
+def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
     try:
-        cursor = db["contacts"].find().skip(skip).limit(limit)
-        docs = await cursor.to_list(length=limit)
-        return serialize_list(docs)
+        response = db.table("contacts").select("*").execute()
+        items = response.data or []
+        return items[skip: skip + limit]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
 @app.get("/api/projects", response_model=List[dict], tags=["Projects"])
-async def list_projects(db=Depends(get_db)):
+def list_projects(db=Depends(get_db)):
     try:
-        cursor = db["projects"].find()
-        projects = await cursor.to_list(length=100)
-        return [serialize_doc(p) for p in projects]
+        response = db.table("projects").select("*").execute()
+        return response.data or []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/projects", tags=["Projects"])
-async def create_project(payload: dict = Body(...), db=Depends(get_db)):
-    payload.pop("_id", None)
-    result = await db["projects"].insert_one(payload)
-    payload["id"] = str(result.inserted_id)
-    payload.pop("_id", None)
-    return payload
+def create_project(payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload.pop("_id", None)
+        response = db.table("projects").insert(payload).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/projects/{item_id}", tags=["Projects"])
-async def delete_project(item_id: str, db=Depends(get_db)):
-    await db["projects"].delete_one({"_id": ObjectId(item_id)})
-    return {"status": "deleted"}
+def delete_project(item_id: str, db=Depends(get_db)):
+    try:
+        db.table("projects").delete().eq("id", item_id).execute()
+        return {"status": "deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.put("/api/projects/{item_id}", tags=["Projects"])
-async def update_project(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
-    payload.pop("id", None)
-    payload.pop("_id", None)
-    await db["projects"].update_one({"_id": ObjectId(item_id)}, {"$set": payload})
-    payload["id"] = item_id
-    return payload
+def update_project(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload.pop("id", None)
+        payload.pop("_id", None)
+        response = db.table("projects").update(payload).eq("id", item_id).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Skills ────────────────────────────────────────────────────────────────────
 @app.get("/api/skills", response_model=List[dict], tags=["Skills"])
-async def list_skills(db=Depends(get_db)):
+def list_skills(db=Depends(get_db)):
     try:
-        cursor = db["skills"].find()
-        skills = await cursor.to_list(length=100)
-        return [serialize_doc(s) for s in skills]
+        response = db.table("skills").select("*").execute()
+        return response.data or []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/skills", tags=["Skills"])
-async def create_skill(payload: dict = Body(...), db=Depends(get_db)):
-    payload.pop("_id", None)
-    result = await db["skills"].insert_one(payload)
-    payload["id"] = str(result.inserted_id)
-    payload.pop("_id", None)
-    return payload
+def create_skill(payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload.pop("_id", None)
+        response = db.table("skills").insert(payload).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/skills/{item_id}", tags=["Skills"])
-async def delete_skill(item_id: str, db=Depends(get_db)):
-    await db["skills"].delete_one({"_id": ObjectId(item_id)})
-    return {"status": "deleted"}
+def delete_skill(item_id: str, db=Depends(get_db)):
+    try:
+        db.table("skills").delete().eq("id", item_id).execute()
+        return {"status": "deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.put("/api/skills/{item_id}", tags=["Skills"])
-async def update_skill(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
-    payload.pop("id", None)
-    payload.pop("_id", None)
-    await db["skills"].update_one({"_id": ObjectId(item_id)}, {"$set": payload})
-    payload["id"] = item_id
-    return payload
+def update_skill(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload.pop("id", None)
+        payload.pop("_id", None)
+        response = db.table("skills").update(payload).eq("id", item_id).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Experience ────────────────────────────────────────────────────────────────
 @app.get("/api/experience", response_model=List[dict], tags=["Experience"])
-async def list_experience(db=Depends(get_db)):
+def list_experience(db=Depends(get_db)):
     try:
-        cursor = db["experience"].find()
-        experience = await cursor.to_list(length=100)
-        return [serialize_doc(e) for e in experience]
+        response = db.table("experience").select("*").execute()
+        return response.data or []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/experience", tags=["Experience"])
-async def create_experience(payload: dict = Body(...), db=Depends(get_db)):
-    payload.pop("_id", None)
-    result = await db["experience"].insert_one(payload)
-    payload["id"] = str(result.inserted_id)
-    payload.pop("_id", None)
-    return payload
+def create_experience(payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload.pop("_id", None)
+        response = db.table("experience").insert(payload).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/experience/{item_id}", tags=["Experience"])
-async def delete_experience(item_id: str, db=Depends(get_db)):
-    await db["experience"].delete_one({"_id": ObjectId(item_id)})
-    return {"status": "deleted"}
+def delete_experience(item_id: str, db=Depends(get_db)):
+    try:
+        db.table("experience").delete().eq("id", item_id).execute()
+        return {"status": "deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.put("/api/experience/{item_id}", tags=["Experience"])
-async def update_experience(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
-    payload.pop("id", None)
-    payload.pop("_id", None)
-    await db["experience"].update_one({"_id": ObjectId(item_id)}, {"$set": payload})
-    payload["id"] = item_id
-    return payload
+def update_experience(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
+    try:
+        payload.pop("id", None)
+        payload.pop("_id", None)
+        response = db.table("experience").update(payload).eq("id", item_id).execute()
+        return response.data[0] if response and getattr(response, "data", None) else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
