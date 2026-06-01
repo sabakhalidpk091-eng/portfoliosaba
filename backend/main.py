@@ -74,11 +74,20 @@ def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
 # ── Projects ──────────────────────────────────────────────────────────────────
 @app.get("/api/projects", response_model=List[dict], tags=["Projects"])
 def list_projects(db=Depends(get_db)):
+    # Mock data fallback as requested for testing
+    mock_projects = [
+        {"id": "1", "title": "Saba Portfolio", "description": "Full-stack conversion to FastAPI + Supabase", "tech_stack": ["React", "FastAPI", "Supabase"]},
+        {"id": "2", "title": "Admin Dashboard", "description": "Real-time management system", "tech_stack": ["React", "CSS Modules"]}
+    ]
+    
+    if db is None:
+        return mock_projects
+        
     try:
         response = db.table("projects").select("*").execute()
-        return response.data or []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return response.data if response.data else mock_projects
+    except Exception:
+        return mock_projects
 
 
 @app.post("/api/projects", tags=["Projects"])
