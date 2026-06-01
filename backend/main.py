@@ -20,8 +20,12 @@ app = FastAPI(
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
-cors_origins_str = getattr(settings, "CORS_ORIGINS", "*") or "*"
-origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://portfoliosabakhalid-9sls.vercel.app",
+    "https://portfoliosabakhalid.vercel.app"
+]
 
 app.add_middleware(
     CORSMiddleware,
