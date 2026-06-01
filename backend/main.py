@@ -48,9 +48,13 @@ def send_message(payload: dict = Body(...), db=Depends(get_db)):
         payload["created_at"] = datetime.now().isoformat()
         payload.pop("_id", None)
         response = db.table("contacts").insert(payload).execute()
-        return response.data[0] if response and getattr(response, "data", None) else None
+        if hasattr(response, "data") and response.data:
+            return response.data[0]
+        return {"error": "No data returned from Supabase", "details": str(response)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
 
 
 @app.get("/api/contact", response_model=List[dict], tags=["Contact"])
