@@ -1,10 +1,13 @@
-from fastapi import FastAPI, Depends, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List
-from datetime import datetime
-
 from config import settings
-from database import get_db
+import os
+from supabase import create_client
+
+def get_db():
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_ANON_KEY")
+    if not url or not key: return None
+    try: return create_client(url, key)
+    except: return None
 
 app = FastAPI(
     title="Saba Portfolio API (Supabase)",
@@ -47,7 +50,8 @@ def test_api():
 
 # ── Contact ───────────────────────────────────────────────────────────────────
 @app.post("/api/contact", tags=["Contact"])
-def send_message(payload: dict = Body(...), db=Depends(get_db)):
+def send_message(payload: dict = Body(...)):
+    db = get_db()
     try:
         payload["created_at"] = datetime.now().isoformat()
         payload.pop("_id", None)
@@ -62,7 +66,8 @@ def send_message(payload: dict = Body(...), db=Depends(get_db)):
 
 
 @app.get("/api/contact", response_model=List[dict], tags=["Contact"])
-def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
+def list_messages(skip: int = 0, limit: int = 50):
+    db = get_db()
     try:
         response = db.table("contacts").select("*").execute()
         items = response.data or []
@@ -73,7 +78,8 @@ def list_messages(skip: int = 0, limit: int = 50, db=Depends(get_db)):
 
 # ── Projects ──────────────────────────────────────────────────────────────────
 @app.get("/api/projects", response_model=List[dict], tags=["Projects"])
-def list_projects(db=Depends(get_db)):
+def list_projects():
+    db = get_db()
     # Mock data fallback as requested for testing
     mock_projects = [
         {"id": "1", "title": "Saba Portfolio", "description": "Full-stack conversion to FastAPI + Supabase", "tech_stack": ["React", "FastAPI", "Supabase"]},
@@ -91,7 +97,8 @@ def list_projects(db=Depends(get_db)):
 
 
 @app.post("/api/projects", tags=["Projects"])
-def create_project(payload: dict = Body(...), db=Depends(get_db)):
+def create_project(payload: dict = Body(...)):
+    db = get_db()
     try:
         payload.pop("_id", None)
         response = db.table("projects").insert(payload).execute()
@@ -101,7 +108,8 @@ def create_project(payload: dict = Body(...), db=Depends(get_db)):
 
 
 @app.delete("/api/projects/{item_id}", tags=["Projects"])
-def delete_project(item_id: str, db=Depends(get_db)):
+def delete_project(item_id: str):
+    db = get_db()
     try:
         db.table("projects").delete().eq("id", item_id).execute()
         return {"status": "deleted"}
@@ -110,7 +118,8 @@ def delete_project(item_id: str, db=Depends(get_db)):
 
 
 @app.put("/api/projects/{item_id}", tags=["Projects"])
-def update_project(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
+def update_project(item_id: str, payload: dict = Body(...)):
+    db = get_db()
     try:
         payload.pop("id", None)
         payload.pop("_id", None)
@@ -122,7 +131,8 @@ def update_project(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
 
 # ── Skills ────────────────────────────────────────────────────────────────────
 @app.get("/api/skills", response_model=List[dict], tags=["Skills"])
-def list_skills(db=Depends(get_db)):
+def list_skills():
+    db = get_db()
     try:
         response = db.table("skills").select("*").execute()
         return response.data or []
@@ -131,7 +141,8 @@ def list_skills(db=Depends(get_db)):
 
 
 @app.post("/api/skills", tags=["Skills"])
-def create_skill(payload: dict = Body(...), db=Depends(get_db)):
+def create_skill(payload: dict = Body(...)):
+    db = get_db()
     try:
         payload.pop("_id", None)
         response = db.table("skills").insert(payload).execute()
@@ -141,7 +152,8 @@ def create_skill(payload: dict = Body(...), db=Depends(get_db)):
 
 
 @app.delete("/api/skills/{item_id}", tags=["Skills"])
-def delete_skill(item_id: str, db=Depends(get_db)):
+def delete_skill(item_id: str):
+    db = get_db()
     try:
         db.table("skills").delete().eq("id", item_id).execute()
         return {"status": "deleted"}
@@ -150,7 +162,8 @@ def delete_skill(item_id: str, db=Depends(get_db)):
 
 
 @app.put("/api/skills/{item_id}", tags=["Skills"])
-def update_skill(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
+def update_skill(item_id: str, payload: dict = Body(...)):
+    db = get_db()
     try:
         payload.pop("id", None)
         payload.pop("_id", None)
@@ -162,7 +175,8 @@ def update_skill(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
 
 # ── Experience ────────────────────────────────────────────────────────────────
 @app.get("/api/experience", response_model=List[dict], tags=["Experience"])
-def list_experience(db=Depends(get_db)):
+def list_experience():
+    db = get_db()
     try:
         response = db.table("experience").select("*").execute()
         return response.data or []
@@ -171,7 +185,8 @@ def list_experience(db=Depends(get_db)):
 
 
 @app.post("/api/experience", tags=["Experience"])
-def create_experience(payload: dict = Body(...), db=Depends(get_db)):
+def create_experience(payload: dict = Body(...)):
+    db = get_db()
     try:
         payload.pop("_id", None)
         response = db.table("experience").insert(payload).execute()
@@ -181,7 +196,8 @@ def create_experience(payload: dict = Body(...), db=Depends(get_db)):
 
 
 @app.delete("/api/experience/{item_id}", tags=["Experience"])
-def delete_experience(item_id: str, db=Depends(get_db)):
+def delete_experience(item_id: str):
+    db = get_db()
     try:
         db.table("experience").delete().eq("id", item_id).execute()
         return {"status": "deleted"}
@@ -190,7 +206,8 @@ def delete_experience(item_id: str, db=Depends(get_db)):
 
 
 @app.put("/api/experience/{item_id}", tags=["Experience"])
-def update_experience(item_id: str, payload: dict = Body(...), db=Depends(get_db)):
+def update_experience(item_id: str, payload: dict = Body(...)):
+    db = get_db()
     try:
         payload.pop("id", None)
         payload.pop("_id", None)
