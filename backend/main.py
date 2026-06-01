@@ -20,12 +20,7 @@ app = FastAPI(
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://portfoliosabakhalid-9sls.vercel.app",
-    "https://portfoliosabakhalid.vercel.app"
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
