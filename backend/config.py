@@ -14,8 +14,11 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
 
     class Config:
-        # Avoid reading .env if it's locked or missing on Vercel
-        env_file = ".env" if os.path.exists(".env") else None
+        # Completely disable .env loading if running on Vercel to avoid file locks
+        if os.getenv("VERCEL"):
+            env_file = None
+        else:
+            env_file = ".env" if os.path.exists(".env") else None
         extra = "ignore"
 
 settings = Settings()
