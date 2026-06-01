@@ -1,5 +1,5 @@
-import os
 from supabase import create_client, Client
+from supabase.lib.client_options import ClientOptions
 
 # Initialize once at module level (Cold Start)
 def _init_client():
@@ -7,7 +7,10 @@ def _init_client():
     key = os.getenv("SUPABASE_ANON_KEY")
     if not url or not key:
         return None
-    return create_client(url, key)
+    
+    # Custom options to avoid connection pooling issues on Vercel
+    opts = ClientOptions(postgrest_client_timeout=10)
+    return create_client(url, key, options=opts)
 
 _db_instance = _init_client()
 
