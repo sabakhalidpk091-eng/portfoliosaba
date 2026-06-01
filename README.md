@@ -1,4 +1,6 @@
-# Saba Portfolio - Full Stack Conversion
+# Saba Portfolio
+Updated: 2026-06-01
+ - Full Stack Conversion
 
 This project has been converted from a static Next.js setup to a modern Full Stack architecture.
 
