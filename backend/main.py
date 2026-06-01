@@ -20,26 +20,16 @@ app = FastAPI(
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
-origins = [o.strip() for o in settings.CORS_ORIGINS.split(",")]
+cors_origins_str = getattr(settings, "CORS_ORIGINS", "*") or "*"
+origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins if origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ── Helper ────────────────────────────────────────────────────────────────────
-def serialize_doc(doc):
-    if not doc:
-        return None
-    if "_id" in doc:
-        doc["id"] = str(doc["_id"])
-        del doc["_id"]
-    return doc
-
-def serialize_list(docs) -> list:
-    return [serialize_doc(d) for d in docs if d]
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
