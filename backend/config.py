@@ -4,15 +4,18 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     MONGODB_URI: str = os.getenv(
         "MONGODB_URI",
-        "mongodb+srv://portfolio:q6bcEVLl57qUb812@cluster0.zvhw8ay.mongodb.net/portfolio_db?retryWrites=true&w=majority&appName=Cluster0"
+        ""
     )
     CORS_ORIGINS: str = os.getenv(
         "CORS_ORIGINS", 
-        "http://localhost:5173,http://localhost:3000,https://portfoliosabakhalid-9sls.vercel.app"
+        "http://localhost:5173,http://localhost:3000,https://portfoliosabakhalid.vercel.app"
     )
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
 
     class Config:
-        env_file = ".env"
+        # Avoid reading .env if it's locked or missing on Vercel
+        env_file = ".env" if os.path.exists(".env") else None
         extra = "ignore"
 
 settings = Settings()
