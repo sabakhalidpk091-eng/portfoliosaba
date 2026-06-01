@@ -40,6 +40,10 @@ def serialize_list(docs) -> list:
 def root():
     return {"message": "Saba Portfolio API on Supabase is running 🚀"}
 
+@app.get("/api/test", tags=["Health"])
+def test_api():
+    return {"status": "Success", "message": "Backend is working perfectly without DB!"}
+
 
 # ── Contact ───────────────────────────────────────────────────────────────────
 @app.post("/api/contact", tags=["Contact"])
